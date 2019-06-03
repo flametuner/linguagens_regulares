@@ -1,5 +1,6 @@
 # -*- coding: latin-1 -*-
 from tkinter import Tk
+
 from mainview import MainView
 
 root = Tk()
