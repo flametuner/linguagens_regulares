@@ -1,5 +1,4 @@
 # -*- coding: latin-1 -*-
-from tkinter import *
 from tkinter.filedialog import asksaveasfilename
 
 import grammar_gui
@@ -17,7 +16,6 @@ class Automata(Hideble):
         self.master = master
         self.name = name
         self.automata = automata
-
         self.container1 = Frame(self.frame)
         self.container1.pack()
         self.automataframe = Frame(self.frame)
@@ -37,7 +35,10 @@ class Automata(Hideble):
 
         self.title = Label(self.container1, text=self.name)
         self.title["font"] = ("Roboto", "15", "bold")
-        self.title.pack()
+        self.title.pack(side=LEFT)
+        self.needSave = Label(self.container1, text='')
+        self.needSave["font"] = ("Roboto", "15", "bold")
+        self.needSave.pack(side=LEFT)
 
         self.updateAutomataDisplay()
 
@@ -131,14 +132,29 @@ class Automata(Hideble):
                             lambda event, command=self.convertToGrammar, label="Sim": createConfimationBox(self.master,
                                                                                                            command,
                                                                                                            "Ao continuar, voce ir transformar o AFD Atual em GR. Deseja continuar?"))
+        self.minimize = Button(self.convertGram)
+        self.minimize["text"] = "Minimizar"
+        self.minimize["font"] = ("Roboto", "10")
+        self.minimize["width"] = 20
+        self.minimize.bind("<ButtonRelease-1>",
+                           lambda event, command=self.minimizeAutomata, label="Sim": createConfimationBox(
+                               self.master, command,
+                               "Ao continuar, voce ira minimizar o automato. Deseja continuar?"))
 
+        self.rename = Button(self.convertGram)
+        self.rename["text"] = "Renomear estados"
+        self.rename["font"] = ("Roboto", "10")
+        self.rename["width"] = 20
+        self.rename.bind("<ButtonRelease-1>",
+                         lambda event: self.renameAutomata())
         # Se for AFD: mostrar botao de conversao para Gramatica Regular
         # Se for AFND: mostrar botao de determinizar
         if isinstance(self.automata, NDFiniteAutomata):
             self.determinize.pack()
         elif isinstance(self.automata, DFiniteAutomata):
             self.convertRG.pack()
-
+            self.minimize.pack()
+            self.rename.pack()
         self.save = Button(self.container6)
         self.save["text"] = "Salvar"
         self.save["font"] = ("Roboto", "10")
@@ -318,13 +334,26 @@ class Automata(Hideble):
         self.automata = finite
         self.updateAutomataDisplay()
         self.convertRG.pack()
+        self.needSave["text"] = '*'
+
+    # Funcao chamada para determinizar automato e dar display do novo automato
+    def minimizeAutomata(self, event):
+        self.automata.minimize()
+        self.needSave["text"] = '*'
+        self.updateAutomataDisplay()
 
     # Conversao de gramatica e display de gramatica
     def convertToGrammar(self, event):
         grammar = self.automata.convertRG()
-        grammarFrame = grammar_gui.Grammar(grammar, self.master, self.topLevel)
+        grammarFrame = grammar_gui.GrammarGui(grammar, self.master, self.topLevel)
         self.hide()
         grammarFrame.show()
+
+    # Renomeia e da display
+    def renameAutomata(self):
+        self.automata.rename()
+        self.needSave["text"] = '*'
+        self.updateAutomataDisplay()
 
     # Adicionar transicao e atualiza GUI de automato
     def addTrans(self, event):
@@ -344,6 +373,7 @@ class Automata(Hideble):
         for s in fromStates:
             for to in toStates:
                 self.automata.addTransiction(s, self.char.get()[0], to)
+        self.needSave["text"] = '*'
         self.updateAutomataDisplay()
 
     # Remover transicao do automato e atualizar automato
@@ -355,6 +385,7 @@ class Automata(Hideble):
             displayBox(self.master, "O estado 'Para' nao existe!")
             return
         self.automata.removeTransiction(self.fromState.get(), self.char.get()[0])
+        self.needSave["text"] = '*'
         self.updateAutomataDisplay()
 
     # Adiciona um novo estado e atualiza GUI do automato
@@ -365,6 +396,7 @@ class Automata(Hideble):
             displayBox(self.master, "O estado ja existe!")
             return
         self.automata.addState(self.stateName.get())
+        self.needSave["text"] = '*'
         self.updateAutomataDisplay()
 
     # Remove um estado e atualiza GUI do automato
@@ -373,6 +405,7 @@ class Automata(Hideble):
             displayBox(self.master, "O estado nao existe!")
             return
         self.automata.removeState(self.stateName.get())
+        self.needSave["text"] = '*'
         self.updateAutomataDisplay()
 
     # Adiciona um estado de aceitacao e atualiza GUI do automato
@@ -384,6 +417,7 @@ class Automata(Hideble):
             displayBox(self.master, "O estado ja e de aceitacao")
             return
         self.automata.addAccepting(self.stateName.get())
+        self.needSave["text"] = '*'
         self.updateAutomataDisplay()
 
     # Remove um estado de aceitacao e atualiza GUI do automato
@@ -395,6 +429,7 @@ class Automata(Hideble):
             displayBox(self.master, "O estado nao e de aceitacao")
             return
         self.automata.removeAccepting(self.stateName.get())
+        self.needSave["text"] = '*'
         self.updateAutomataDisplay()
 
     # Altera o estado inicial e atualiza GUI do automato
@@ -403,6 +438,7 @@ class Automata(Hideble):
             displayBox(self.master, "O estado nao existe!")
             return
         self.automata.setInitial(self.stateName.get())
+        self.needSave["text"] = '*'
         self.updateAutomataDisplay()
 
     # Checka uma string e retorna se aceitou ou nao
@@ -424,6 +460,7 @@ class Automata(Hideble):
             return
         self.automata.save(f)
         self.title["text"] = f.split('/')[-1]
+        self.needSave["text"] = ''
         displayBox(self.master, "Salvo com sucesso em " + f)
 
     # Retornar ao menu anterior

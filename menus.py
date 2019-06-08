@@ -3,7 +3,8 @@ from tkinter import Label, Button, LEFT, Frame
 from tkinter.filedialog import askopenfilename
 
 from automata_gui import Automata
-from grammar_gui import Grammar
+from grammar_gui import GrammarGui
+from glc_gui import GrammarGLCGui
 from imports.finiteautomaton import *
 from imports.guiutils import Hideble
 from regex_gui import Regex
@@ -185,6 +186,8 @@ class RGMenu(Hideble):
         self.container2.pack()
         self.container3 = Frame(self.frame)
         self.container3.pack()
+        self.container4 = Frame(self.frame)
+        self.container4.pack()
         self.title = Label(self.container1, text="Gramáticas Regulares")
         self.title["font"] = ("Roboto", "15", "bold")
         self.title.pack()
@@ -203,7 +206,22 @@ class RGMenu(Hideble):
         self.loadafd.bind("<ButtonRelease-1>", self.selectGR)
         self.loadafd.pack(side=LEFT)
 
-        self.back = Button(self.container3)
+        self.createafd = Button(self.container3)
+        self.createafd["text"] = "Criar nova GLC"
+        self.createafd["font"] = ("Roboto", "10")
+        self.createafd["width"] = 20
+        self.createafd.bind("<ButtonRelease-1>", self.createGLC)
+        self.createafd.pack(side=LEFT)
+
+        self.loadafd = Button(self.container3)
+        self.loadafd["text"] = "Carregar GLC"
+        self.loadafd["font"] = ("Roboto", "10")
+        self.loadafd["width"] = 20
+        self.loadafd.config(state="active")
+        self.loadafd.bind("<ButtonRelease-1>", self.selectGLC)
+        self.loadafd.pack(side=LEFT)
+
+        self.back = Button(self.container4)
         self.back["text"] = "Voltar"
         self.back["font"] = ("Roboto", "10")
         self.back["width"] = 20
@@ -213,7 +231,7 @@ class RGMenu(Hideble):
     # Criação de uma nova GR e abrindo GUI
     def createGR(self, event):
         grammar = RegularGrammar()
-        grammarFrame = Grammar(grammar, self.master, self)
+        grammarFrame = GrammarGui(grammar, self.master, self)
         self.hide()
         grammarFrame.show()
 
@@ -224,7 +242,26 @@ class RGMenu(Hideble):
             return
         grammar = RegularGrammar()
         grammar.load(filename)
-        grammarFrame = Grammar(grammar, self.master, self, filename.split("/")[-1])
+        grammarFrame = GrammarGui(grammar, self.master, self, filename.split("/")[-1])
+        self.hide()
+        grammarFrame.show()
+
+    # Criação de uma nova GLC e abrindo GUI
+    def createGLC(self, event):
+        grammar = Grammar()
+        grammarFrame = GrammarGLCGui(grammar, self.master, self)
+        self.hide()
+        grammarFrame.show()
+
+    # Seleção de GR por filename
+    def selectGLC(self, event):
+        filename = askopenfilename(
+            filetypes=[('Arquivos de Gramatica Livre de Contexto', '.glc'), ('Todos os arquivos', '.*')])
+        if not filename:
+            return
+        grammar = Grammar()
+        grammar.load(filename)
+        grammarFrame = GrammarGLCGui(grammar, self.master, self, filename.split("/")[-1])
         self.hide()
         grammarFrame.show()
 

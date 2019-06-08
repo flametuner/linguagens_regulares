@@ -85,6 +85,64 @@ class FiniteAutomata:
             self.initial = finiteAutomata.initial
             self.accepting = finiteAutomata.accepting
 
+    def union(self, other):
+        union_result = NDFiniteAutomata()
+        start_state = 'q0'
+        union_result.addState(start_state)
+        union_result.setInitial(start_state)
+        id = 1
+        translateTable = {}
+        for state in self.getStates():
+            translateTable[state] = 'q' + str(id)
+            union_result.addState(translateTable[state])
+            id += 1
+        for state in self.getStates():
+            for char in self.getChars():
+                if char in self.automata[state].keys():
+                    toState = self.automata[state][char]
+                    if isinstance(toState, str):
+                        union_result.addTransiction(translateTable[state], char, translateTable[toState])
+                    else:
+                        for s in toState:
+                            union_result.addTransiction(translateTable[state], char, translateTable[s])
+        for accept in self.accepting:
+            union_result.addAccepting(translateTable[accept])
+        union_result.addTransiction(start_state, '&', translateTable[self.initial])
+        translateTable = {}
+        for state in other.getStates():
+            translateTable[state] = 'q' + str(id)
+            union_result.addState(translateTable[state])
+            id += 1
+        for state in other.getStates():
+            for char in other.getChars():
+                if char in other.automata[state].keys():
+                    toState = other.automata[state][char]
+                    if isinstance(toState, str):
+                        union_result.addTransiction(translateTable[state], char, translateTable[toState])
+                    else:
+                        for s in toState:
+                            union_result.addTransiction(translateTable[state], char, translateTable[s])
+        for accept in other.accepting:
+            union_result.addAccepting(translateTable[accept])
+        union_result.addTransiction(start_state, '&', translateTable[other.initial])
+
+        return union_result
+
+    def intersect(self, other):
+        self.complement()
+        other.complement()
+        automata = self.union(other)
+
+        automata.complement()
+        if automata.initial in automata.accepting:
+            automata.accepting.remove(automata.initial)
+
+        return automata
+
+    def complement(self):
+        final_states = [item for item in list(self.getStates()) if item not in self.accepting]
+        self.accepting = final_states
+
     # Função para printar tabela no console
     def printTable(self):
         chars = self.getChars()
@@ -228,15 +286,122 @@ class DFiniteAutomata(FiniteAutomata):
         return grammar
 
     def minimize(self):
-        pass
+        alcancancaveis = set()
+        lista = [self.initial]
+        while lista:
+            state = lista.pop(0)
+            alcancancaveis.add(state)
+            for nt in self.getChars():
+                if nt in self.automata[state]:
+                    if self.automata[state][nt] in alcancancaveis:
+                        continue
+                    lista.append(self.automata[state][nt])
 
-# Gramatica Regular
-class RegularGrammar:
+        inalcancaveis = [item for item in list(self.getStates()) if item not in alcancancaveis]
+        for state in inalcancaveis:
+            self.removeState(state)
+        vivos = set(self.accepting)
+        inverseAutomata = {}
+        for state in self.getStates():
+            for nt in self.getChars():
+                if nt in self.automata[state]:
+                    toState = self.automata[state][nt]
+                    if toState not in inverseAutomata:
+                        inverseAutomata[toState] = set()
+                    inverseAutomata[toState].add(state)
+        lista = list(vivos)
+        while lista:
+            state = lista.pop(0)
+            vivos.add(state)
+            if state in inverseAutomata:
+                for fromState in inverseAutomata[state]:
+                    if fromState not in vivos:
+                        lista.append(fromState)
+        mortos = [item for item in list(self.getStates()) if item not in vivos]
+        for state in mortos:
+            self.removeState(state)
+
+        p = [list(self.accepting), [item for item in list(self.getStates()) if item not in self.accepting]]
+        consistent = False
+        while not consistent:
+            consistent = True
+            for sets in p:
+                for symbol in self.getChars():
+                    for sett in p:
+                        temp = []
+                        for q in sett:
+                            if symbol in self.automata[q]:
+                                to = self.automata[q][symbol]
+                                if to in sets:
+                                    if q not in temp:
+                                        temp.append(q)
+                        if temp and temp != sett:
+                            consistent = False
+                            p.remove(sett)
+                            p.append(temp)
+                            temp_t = list(sett)
+                            for state in temp:
+                                temp_t.remove(state)
+                            p.append(temp_t)
+        for state in p:
+            if self.initial in state:
+                self.setInitial(''.join(state))
+                break
+        final_states = []
+        for state in p:
+            for final_state in self.accepting:
+                if final_state in state and ''.join(state) not in final_states:
+                    final_states.append(''.join(state))
+        self.accepting = final_states
+        new_automata = {}
+        for state in p:
+            state_name = ''.join(state)
+            new_automata[state_name] = {}
+            for symbol in self.getChars():
+                destiny = ''
+                if symbol in self.automata[state[0]]:
+                    for state2 in p:
+                        if self.automata[state[0]][symbol] in state2:
+                            destiny = ''.join(state2)
+                if destiny:
+                    new_automata[state_name][symbol] = destiny
+        self.automata = new_automata
+
+    def rename(self):
+        result = DFiniteAutomata()
+        start_state = 'q0'
+        result.addState(start_state)
+        result.setInitial(start_state)
+        id = 1
+        translateTable = {}
+        for state in self.getStates():
+            if state == self.initial:
+                translateTable[state] = start_state
+            else:
+                translateTable[state] = 'q' + str(id)
+                result.addState(translateTable[state])
+                id += 1
+        for state in self.getStates():
+            for char in self.getChars():
+                if char in self.automata[state].keys():
+                    toState = self.automata[state][char]
+                    if isinstance(toState, str):
+                        result.addTransiction(translateTable[state], char, translateTable[toState])
+                    else:
+                        for s in toState:
+                            result.addTransiction(translateTable[state], char, translateTable[s])
+        for accept in self.accepting:
+            result.addAccepting(translateTable[accept])
+        self.initial = result.initial
+        self.accepting = result.accepting
+        self.automata = result.automata
+
+
+class Grammar:
 
     def __init__(self, initial=''):
-        self.grammar = {}
+        self.productions = {}
         self.initial = initial.upper()
-        self.current = initial.upper()
 
     def isInitial(self, nt):
         return nt.upper() == self.initial
@@ -244,52 +409,85 @@ class RegularGrammar:
     def setInitial(self, nt):
         self.initial = nt.upper()
 
+    # Adiciona produção
+    def addProduction(self, to, prod):
+        if not to.upper() in self.productions:
+            self.productions[to.upper()] = []
+        if prod in self.productions[to.upper()]:
+            return -1
+        self.productions[to.upper()].append(prod)
+        return len(self.productions[to.upper()]) - 1
+
+    def removeProduction(self, to, prod):
+        if not to.upper() in self.productions:
+            return
+        self.productions[to.upper()].remove(prod)
+        if len(self.productions[to.upper()]) == 0:
+            del self.productions[to.upper()]
+
+    def printGrammar(self):
+        for x in self.productions:
+            print(str(x) + ": " + str(self.productions[x]))
+        print()
+
+    def save(self, file):
+        with open(file, 'wb') as pickle_file:
+            pickle.dump(self, pickle_file)
+
+    def load(self, file):
+        with open(file, 'rb') as pickle_file:
+            gram = pickle.load(pickle_file)
+            self.productions = gram.productions
+            self.initial = gram.initial
+
+
+# Gramatica Regular
+class RegularGrammar(Grammar):
+
+    def __init__(self, *args, **kwargs):
+        super(RegularGrammar, self).__init__(*args, **kwargs)
+        self.current = self.initial.upper()
+
     # Adiciona palavra vazia, criando um novo estado inicial, duplicando os itens e
     def addEmptyWord(self):
         duplicate = False
-        for prod in self.grammar[self.initial]:
+        for prod in self.productions[self.initial]:
             if len(prod) <= 1:
                 continue
             if self.isInitial(prod[1]):
                 duplicate = True
                 break
         if duplicate:
-            self.grammar['Z'] = self.grammar[self.initial].copy()
+            self.productions['Z'] = self.productions[self.initial].copy()
             self.initial = 'Z'
-        self.grammar[self.initial].append('&')
+        self.productions[self.initial].append('&')
         self.cleanCurrent()
 
     # Adiciona produção
     # Se o simbolo terminal for &, e o simbolo for inicial roda função addEmptyWord()
     def addProduction(self, to, terminal, nonterminal=""):
-        if not to.upper() in self.grammar:
-            self.grammar[to.upper()] = []
+        if not to.upper() in self.productions:
+            self.productions[to.upper()] = []
         if terminal == '&':
-            if len(self.grammar) == 1:
+            if len(self.productions) == 1:
                 self.setInitial(to)
             if self.isInitial(to):
                 self.addEmptyWord()
-                return len(self.grammar[self.initial]) - 1
-            if len(self.grammar[to.upper()]) == 0:
-                del self.grammar[to.upper()]
+                return len(self.productions[self.initial]) - 1
+            if len(self.productions[to.upper()]) == 0:
+                del self.productions[to.upper()]
             return -1
         prod = terminal.lower() + nonterminal.upper()
-        if prod in self.grammar[to.upper()]:
-            return -1
-        self.grammar[to.upper()].append(prod)
-        return len(self.grammar[to.upper()]) - 1
+        return super(RegularGrammar, self).addProduction(to, prod)
 
     def removeProduction(self, to, terminal, nonterminal=""):
-        if not to.upper() in self.grammar:
-            return
-        self.grammar[to.upper()].remove(terminal + nonterminal)
-        if len(self.grammar[to.upper()]) == 0:
-            del self.grammar[to.upper()]
+        prod = terminal.lower() + nonterminal.upper()
+        super(RegularGrammar, self).removeProduction(to, prod)
 
     # Geração de string com nao terminal e id da produção
     def generate(self, nt, prod):
         try:
-            charac = self.grammar[nt.upper()][prod]
+            charac = self.productions[nt.upper()][prod]
             if charac == '&':
                 charac = ''
             self.current = self.current.replace(nt.upper(), charac)
@@ -309,30 +507,18 @@ class RegularGrammar:
         afnd.setInitial(self.initial)
         afnd.addState('@')
         afnd.addAccepting('@')
-        for x in self.grammar:
+        for x in self.productions:
             afnd.addState(x)
-            for prod in self.grammar[x]:
+            for prod in self.productions[x]:
                 to = '@'
                 if len(prod) > 1:
                     to = prod[1]
                 afnd.addTransiction(x, prod[0], to)
         return afnd
 
-    def printGrammar(self):
-        for x in self.grammar:
-            print(str(x) + ": " + str(self.grammar[x]))
-        print()
-
-    def save(self, file):
-        with open(file, 'wb') as pickle_file:
-            pickle.dump(self, pickle_file)
-
     def load(self, file):
-        with open(file, 'rb') as pickle_file:
-            gram = pickle.load(pickle_file)
-            self.grammar = gram.grammar
-            self.initial = gram.initial
-            self.current = self.initial
+        super(RegularGrammar, self).load(file)
+        self.current = self.initial
 
 
 # Expressao Regular
