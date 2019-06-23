@@ -428,7 +428,9 @@ class Grammar:
         return len(self.productions[to]) - 1
 
     def removeProduction(self, to, prod):
-        if not to in self.productions:
+        if to not in self.productions:
+            return
+        if prod not in self.productions[to]:
             return
         self.productions[to].remove(prod)
         if len(self.productions[to]) == 0:
@@ -454,14 +456,19 @@ class Grammar:
 
     def convert_chomsky_normal_form(self):
         self.chomsky_start()
+        self.printGrammar()
         self.chomsky_term()
+        self.printGrammar()
         self.chomsky_bin()
+        self.printGrammar()
         self.chomsky_del()
+        self.printGrammar()
         self.chomsky_unit()
+        self.printGrammar()
 
     def chomsky_start(self):
-        self.productions["S'"] = [[self.initial]]
-        self.initial = "S'"
+        self.productions['S~'] = [[self.initial]]
+        self.initial = 'S~'
 
     def substitute(self, substituteDict):
         for nt in self.productions:
@@ -485,7 +492,7 @@ class Grammar:
             substituteDict[t] = "NT" + t.upper()
         self.substitute(substituteDict)
         for k in substituteDict:
-            self.addProduction(substituteDict[k], k)
+            self.addProduction(substituteDict[k], [k])
 
     def chomsky_bin(self):
         analyze = list(self.productions.keys())
@@ -521,8 +528,9 @@ class Grammar:
                             if len(prod) == 0:
                                 indirectNullable.add(next)
                                 prod.append('&')
-                            self.productions[next].append(prod)
-                            productions.append(prod)
+                            if prod not in self.productions[next]:
+                                self.productions[next].append(prod)
+                                productions.append(prod)
                             break
             for nt in nullableNonTerminals:
                 self.removeProduction(nt, ['&'])
@@ -539,10 +547,13 @@ class Grammar:
                 t, nt = self.get_terminals(prod)
                 if len(prod) == 1 and len(t) == 0:
                     unit = prod[0]
-                    self.productions[next].extend(self.productions[unit])
+                    for prodUnit in self.productions[unit]:
+                        self.addProduction(next, prodUnit)
                     self.removeProduction(next, prod)
                     productions.extend(self.productions[unit])
 
+    def remove_left_recursion(self):
+        
 
 g = Grammar()
 g.addProduction('Expr', ['Term'])
@@ -575,7 +586,7 @@ g1.addProduction('A', ['a'])
 g1.addProduction('A', ['&'])
 g1.setInitial('S')
 g1.printGrammar()
-g1.chomsky_del()
+g1.convert_chomsky_normal_form()
 g1.printGrammar()
 # Gramatica Regular
 class RegularGrammar(Grammar):
