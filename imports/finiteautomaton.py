@@ -396,38 +396,50 @@ class DFiniteAutomata(FiniteAutomata):
         self.accepting = result.accepting
         self.automata = result.automata
 
-
 class Grammar:
 
     def __init__(self, initial=''):
         self.productions = {}
         self.initial = initial.upper()
 
+    def get_terminals(self, production):
+        terminals = set()
+        nonterminals = set()
+        for c in production:
+            if c not in self.productions:
+                terminals.add(c)
+            else:
+                nonterminals.add(c)
+        return terminals, nonterminals
+
     def isInitial(self, nt):
-        return nt.upper() == self.initial
+        return nt == self.initial
 
     def setInitial(self, nt):
-        self.initial = nt.upper()
+        self.initial = nt
 
     # Adiciona produção
     def addProduction(self, to, prod):
-        if not to.upper() in self.productions:
-            self.productions[to.upper()] = []
-        if prod in self.productions[to.upper()]:
+        if not to in self.productions:
+            self.productions[to] = []
+        if prod in self.productions[to]:
             return -1
-        self.productions[to.upper()].append(prod)
-        return len(self.productions[to.upper()]) - 1
+        self.productions[to].append(prod)
+        return len(self.productions[to]) - 1
 
     def removeProduction(self, to, prod):
-        if not to.upper() in self.productions:
+        if not to in self.productions:
             return
-        self.productions[to.upper()].remove(prod)
-        if len(self.productions[to.upper()]) == 0:
-            del self.productions[to.upper()]
+        self.productions[to].remove(prod)
+        if len(self.productions[to]) == 0:
+            del self.productions[to]
 
     def printGrammar(self):
         for x in self.productions:
-            print(str(x) + ": " + str(self.productions[x]))
+            print(str(x) + ": ", end='')
+            for prod in self.productions[x]:
+                print(' '.join(prod), end=' | ')
+            print()
         print()
 
     def save(self, file):
@@ -440,7 +452,131 @@ class Grammar:
             self.productions = gram.productions
             self.initial = gram.initial
 
+    def convert_chomsky_normal_form(self):
+        self.chomsky_start()
+        self.chomsky_term()
+        self.chomsky_bin()
+        self.chomsky_del()
+        self.chomsky_unit()
 
+    def chomsky_start(self):
+        self.productions["S'"] = [[self.initial]]
+        self.initial = "S'"
+
+    def substitute(self, substituteDict):
+        for nt in self.productions:
+            for prod in self.productions[nt]:
+                for i in range(len(prod)):
+                    term = prod[i]
+                    if term in substituteDict:
+                        prod[i] = substituteDict[term]
+
+    def chomsky_term(self):
+        terminals = set()
+        nonterminals = set()
+        for nt in self.productions:
+            for prod in self.productions[nt]:
+                t, nt = self.get_terminals(prod)
+                nonterminals.update(nt)
+                if len(prod) > 1 and len(t) > 0:
+                    terminals.update(t)
+        substituteDict = {}
+        for t in terminals:
+            substituteDict[t] = "NT" + t.upper()
+        self.substitute(substituteDict)
+        for k in substituteDict:
+            self.addProduction(substituteDict[k], k)
+
+    def chomsky_bin(self):
+        analyze = list(self.productions.keys())
+        while analyze:
+            next = analyze.pop(0)
+            for prod in self.productions[next]:
+                t, nt = self.get_terminals(prod)
+                if len(prod) > 2 and len(t) == 0:
+                    copyProd = list(prod)
+                    del prod[1:len(prod)]
+                    prod.append(next + "'")
+                    copyProd.pop(0)
+                    self.addProduction(next + "'", copyProd)
+                    analyze.append(next + "'")
+
+    def chomsky_del(self):
+        nullableNonTerminals = set()
+        for nt in self.productions:
+            for prod in self.productions[nt]:
+                for term in prod:
+                    if term == '&':
+                        nullableNonTerminals.add(nt)
+                        break
+        indirectNullable = set()
+        while nullableNonTerminals:
+            for next in self.productions.keys():
+                productions = list(self.productions[next])
+                while productions:
+                    prod = productions.pop(0).copy()
+                    for term in prod:
+                        if term in nullableNonTerminals:
+                            prod.remove(term)
+                            if len(prod) == 0:
+                                indirectNullable.add(next)
+                                prod.append('&')
+                            self.productions[next].append(prod)
+                            productions.append(prod)
+                            break
+            for nt in nullableNonTerminals:
+                self.removeProduction(nt, ['&'])
+            nullableNonTerminals.clear()
+            nullableNonTerminals = indirectNullable
+
+    def chomsky_unit(self):
+        analyze = list(self.productions.keys())
+        while analyze:
+            next = analyze.pop(0)
+            productions = list(self.productions[next])
+            while productions:
+                prod = productions.pop(0)
+                t, nt = self.get_terminals(prod)
+                if len(prod) == 1 and len(t) == 0:
+                    unit = prod[0]
+                    self.productions[next].extend(self.productions[unit])
+                    self.removeProduction(next, prod)
+                    productions.extend(self.productions[unit])
+
+
+g = Grammar()
+g.addProduction('Expr', ['Term'])
+g.addProduction('Expr', ['Expr', 'AddOp', 'Term'])
+g.addProduction('Expr', ['AddOp', 'Term'])
+g.addProduction('Term', ['Factor'])
+g.addProduction('Term', ['Term', 'MulOp', 'Factor'])
+g.addProduction('Factor', ['Primary'])
+g.addProduction('Factor', ['Factor', '^', 'Primary'])
+g.addProduction('Factor', ['Factor', '^', 'Primary'])
+g.addProduction('Primary', ['number'])
+g.addProduction('Primary', ['variable'])
+g.addProduction('Primary', ['(', 'Expr', ')'])
+g.addProduction('AddOp', ['+'])
+g.addProduction('AddOp', ['-'])
+g.addProduction('MulOp', ['*'])
+g.addProduction('MulOp', ['/'])
+g.setInitial('Expr')
+g.printGrammar()
+g.convert_chomsky_normal_form()
+g.printGrammar()
+g1 = Grammar()
+g1.addProduction('S', ['A', 'b', 'B'])
+g1.addProduction('S', ['C'])
+g1.addProduction('B', ['A', 'A'])
+g1.addProduction('B', ['A', 'C'])
+g1.addProduction('C', ['b'])
+g1.addProduction('C', ['c'])
+g1.addProduction('A', ['a'])
+g1.addProduction('A', ['&'])
+g1.setInitial('S')
+g1.printGrammar()
+g1.chomsky_del()
+g1.printGrammar()
 # Gramatica Regular
 class RegularGrammar(Grammar):
 
