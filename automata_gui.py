@@ -147,14 +147,8 @@ class Automata(Hideble):
         self.rename["width"] = 20
         self.rename.bind("<ButtonRelease-1>",
                          lambda event: self.renameAutomata())
-        # Se for AFD: mostrar botao de conversao para Gramatica Regular
-        # Se for AFND: mostrar botao de determinizar
-        if isinstance(self.automata, NDFiniteAutomata):
-            self.determinize.pack()
-        elif isinstance(self.automata, DFiniteAutomata):
-            self.convertRG.pack()
-            self.minimize.pack()
-            self.rename.pack()
+
+        self.updateButtons()
         self.save = Button(self.container6)
         self.save["text"] = "Salvar"
         self.save["font"] = ("Roboto", "10")
@@ -168,6 +162,16 @@ class Automata(Hideble):
         self.exit["width"] = 20
         self.exit.bind("<ButtonRelease-1>", self.returnTop)
         self.exit.pack()
+
+    # Se for AFD: mostrar botao de conversao para Gramatica Regular
+    # Se for AFND: mostrar botao de determinizar
+    def updateButtons(self):
+        if isinstance(self.automata, NDFiniteAutomata):
+            self.determinize.pack()
+        elif isinstance(self.automata, DFiniteAutomata):
+            self.convertRG.pack()
+            self.minimize.pack()
+            self.rename.pack()
 
     # Função para atualizar o automato finito na GUI
     def updateAutomataDisplay(self):
@@ -333,6 +337,7 @@ class Automata(Hideble):
         finite = self.automata.determinize()
         self.automata = finite
         self.updateAutomataDisplay()
+        self.updateButtons()
         self.convertRG.pack()
         self.needSave["text"] = '*'
 

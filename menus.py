@@ -25,14 +25,14 @@ class Menu(Hideble):
         self.rgmenu = None
         self.regexmenu = None
         self.automaton = Button(self.frame)
-        self.automaton["text"] = "Autômato Finito"
+        self.automaton["text"] = "Autômatos Finito"
         self.automaton["font"] = ("Roboto", "10")
         self.automaton["width"] = 20
         self.automaton.bind("<ButtonRelease-1>", self.openFaMenu)
         self.automaton.pack(side=LEFT)
 
         self.grammar = Button(self.frame)
-        self.grammar["text"] = "Gramática Regular"
+        self.grammar["text"] = "Gramáticas"
         self.grammar["font"] = ("Roboto", "10")
         self.grammar["width"] = 20
         self.grammar.bind("<ButtonRelease-1>", self.openRgMenu)
@@ -188,7 +188,7 @@ class RGMenu(Hideble):
         self.container3.pack()
         self.container4 = Frame(self.frame)
         self.container4.pack()
-        self.title = Label(self.container1, text="Gramáticas Regulares")
+        self.title = Label(self.container1, text="Gramáticas")
         self.title["font"] = ("Roboto", "15", "bold")
         self.title.pack()
         self.createafd = Button(self.container2)

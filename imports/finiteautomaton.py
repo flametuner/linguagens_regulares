@@ -463,8 +463,8 @@ class Grammar:
         self.chomsky_unit()
 
     def chomsky_start(self):
-        self.productions['S~'] = [[self.initial]]
-        self.initial = 'S~'
+        self.productions[self.initial + '~'] = [[self.initial]]
+        self.initial = self.initial + '~'
 
     def substitute(self, substituteDict):
         for nt in self.productions:
@@ -718,6 +718,7 @@ class Grammar:
         nonterminals = set(self.productions.keys())
         for nt in nonterminals:
             if len(self.first(nt).intersection(self.follow(nt))) > 0:
+                self.printGrammar()
                 raise Exception("Gramatica não é LL(1)")
         i = 1
         analysis_table = {}

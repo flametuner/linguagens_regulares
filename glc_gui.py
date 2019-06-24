@@ -1,11 +1,8 @@
 # -*- coding: latin-1 -*-
-from tkinter import *
 from tkinter.filedialog import asksaveasfilename
 
-import automata_gui
-from imports.finiteautomaton import *
 from imports.guiutils import *
-
+import re
 
 # GUI de Gramatica Regular
 class GrammarGLCGui(Hideble):
@@ -34,19 +31,15 @@ class GrammarGLCGui(Hideble):
         self.container5.pack()
         self.container6 = Frame(self.frame)
         self.container6.pack()
+        self.container7 = Frame(self.frame)
+        self.container7.pack()
 
         self.title = Label(self.container1, text=self.name)
         self.title["font"] = ("Roboto", "15", "bold")
         self.title.pack()
 
-
         self.updateProdGenDisplay()
         self.updateGrammarDisplay()
-
-        self.entry_textDe = StringVar()
-
-        self.entry_textDe.trace("w", lambda *args: character_limit(self.entry_textDe))
-        self.entry_textDe.trace("w", lambda *args: self.entry_textDe.set(self.entry_textDe.get().upper()))
 
         self.addProd = Button(self.container2)
         self.addProd["text"] = "Adicionar producao"
@@ -62,7 +55,7 @@ class GrammarGLCGui(Hideble):
         self.removeProd.bind("<ButtonRelease-1>", self.createRemoveProductionFrame)
         self.removeProd.pack(side=LEFT)
 
-        self.setInitial = Button(self.container4)
+        self.setInitial = Button(self.container3)
         self.setInitial["text"] = "Alterar estado inicial"
         self.setInitial["font"] = ("Roboto", "10")
         self.setInitial["width"] = 20
@@ -71,14 +64,93 @@ class GrammarGLCGui(Hideble):
                                  command, label, "Nao Terminal"))
         self.setInitial.pack()
 
-        self.save = Button(self.container6)
+        self.chomsky = Button(self.container4)
+        self.chomsky["text"] = "Forma normal de Chomsky"
+        self.chomsky["font"] = ("Roboto", "10")
+        self.chomsky["width"] = 20
+        self.chomsky.bind("<ButtonRelease-1>",
+                            lambda event, command=self.convertToChomsky, label="Sim": createConfimationBox(self.master,
+                                                                                                           command,
+                                                                                                           "Ao continuar, voce converter a gramatica atual para forma normal de chomsky. Deseja continuar?"))
+        self.chomsky.pack()
+
+        self.left_recursion_dir = Button(self.container4)
+        self.left_recursion_dir["text"] = "Remover Req Esq Dir"
+        self.left_recursion_dir["font"] = ("Roboto", "10")
+        self.left_recursion_dir["width"] = 20
+        self.left_recursion_dir.bind("<ButtonRelease-1>",
+                          lambda event, command=self.removeLeftRecursionDir, label="Sim": createConfimationBox(self.master,
+                                                                                                         command,
+                                                                                                         "Ao continuar, voce ira remover a recursão a esquerda. Deseja continuar?"))
+        self.left_recursion_dir.pack(side=LEFT)
+
+        self.left_recursion_indir = Button(self.container4)
+        self.left_recursion_indir["text"] = "Remover Req Esq Indir"
+        self.left_recursion_indir["font"] = ("Roboto", "10")
+        self.left_recursion_indir["width"] = 20
+        self.left_recursion_indir.bind("<ButtonRelease-1>",
+                                     lambda event, command=self.removeLeftRecursionIndir, label="Sim": createConfimationBox(
+                                         self.master,
+                                         command,
+                                         "Ao continuar, voce ira remover a recursão a esquerda. Deseja continuar?"))
+        self.left_recursion_indir.pack()
+
+        self.fatoration_dir = Button(self.container5)
+        self.fatoration_dir["text"] = "Fatoração Direta"
+        self.fatoration_dir["font"] = ("Roboto", "10")
+        self.fatoration_dir["width"] = 20
+        self.fatoration_dir.bind("<ButtonRelease-1>",
+                                 lambda event, command=self.factorization_direct, label="Sim": createConfimationBox(
+                                     self.master,
+                                     command,
+                                     "Ao continuar, voce ira fatorar a gramatica. Deseja continuar?"))
+        self.fatoration_dir.pack(side=LEFT)
+
+        self.fatoration_dir = Button(self.container5)
+        self.fatoration_dir["text"] = "Fatoração Indireta"
+        self.fatoration_dir["font"] = ("Roboto", "10")
+        self.fatoration_dir["width"] = 20
+        self.fatoration_dir.bind("<ButtonRelease-1>",
+                                 lambda event, command=self.factorization_indirect, label="Sim": createConfimationBox(
+                                     self.master,
+                                     command,
+                                     "Ao continuar, voce ira fatorar a gramatica. Deseja continuar?"))
+        self.fatoration_dir.pack()
+
+        self.first = Button(self.container6)
+        self.first["text"] = "First"
+        self.first["font"] = ("Roboto", "10")
+        self.first["width"] = 20
+        self.first.bind("<ButtonRelease-1>",
+                             lambda event, command=self.first_func, label="First": self.createFirstSelect(
+                                 command, label, "First"))
+        self.first.pack(side=LEFT)
+
+        self.follow = Button(self.container6)
+        self.follow["text"] = "Follow"
+        self.follow["font"] = ("Roboto", "10")
+        self.follow["width"] = 20
+        self.follow.bind("<ButtonRelease-1>",
+                             lambda event, command=self.follow_func, label="Follow": self.createFollowSelect(
+                                 command, label, "Follow"))
+        self.follow.pack()
+
+        self.table = Button(self.container7)
+        self.table["text"] = "Tabela de Análise"
+        self.table["font"] = ("Roboto", "10")
+        self.table["width"] = 20
+        self.table.bind("<ButtonRelease-1>", self.show_table)
+        self.table.pack()
+
+
+        self.save = Button(self.container7)
         self.save["text"] = "Salvar"
         self.save["font"] = ("Roboto", "10")
         self.save["width"] = 20
         self.save.bind("<ButtonRelease-1>", self.file_save)
         self.save.pack()
 
-        self.exit = Button(self.container6)
+        self.exit = Button(self.container7)
         self.exit["text"] = "Voltar"
         self.exit["font"] = ("Roboto", "10")
         self.exit["width"] = 20
@@ -97,12 +169,10 @@ class GrammarGLCGui(Hideble):
         container4 = Frame(window)
         container4.pack()
 
-        self.entry_textDe.set('')
-
         nomeLabel = Label(container, text="De", font="Roboto")
         nomeLabel.pack(side=LEFT)
 
-        self.fromState = Entry(container, textvariable=self.entry_textDe)
+        self.fromState = Entry(container)
         self.fromState["width"] = 10
         self.fromState["font"] = "Roboto"
         self.fromState.pack(side=LEFT)
@@ -164,6 +234,43 @@ class GrammarGLCGui(Hideble):
             b.bind("<ButtonRelease-1>", lambda event, a=str(nt): self.alterInitialState(a))
             b.pack(side=LEFT)
 
+    # Selecao de first
+    def createFirstSelect(self, command, labelName, text):
+        window = Toplevel(self.master)
+        container = Frame(window)
+        container.pack()
+        terminals = set()
+        nonterminals = set(self.grammar.productions.keys())
+        for nt in self.grammar.productions:
+            for prod in self.grammar.productions[nt]:
+                for curr_term in prod:
+                    if curr_term not in nonterminals:
+                        terminals.add(curr_term)
+        terminals.update(nonterminals)
+        for nt in terminals:
+            b = Button(container)
+            b["text"] = str(nt)
+            b["font"] = ("Roboto", "10")
+            b["width"] = 5
+            b["command"] = window.destroy
+            b.bind("<ButtonRelease-1>", lambda event, a=str(nt): self.first_func(a))
+            b.pack(side=LEFT)
+
+    # Selecao de follow
+    def createFollowSelect(self, command, labelName, text):
+        window = Toplevel(self.master)
+        container = Frame(window)
+        container.pack()
+        nonterminals = set(self.grammar.productions.keys())
+        for nt in nonterminals:
+            b = Button(container)
+            b["text"] = str(nt)
+            b["font"] = ("Roboto", "10")
+            b["width"] = 5
+            b["command"] = window.destroy
+            b.bind("<ButtonRelease-1>", lambda event, a=str(nt): self.follow_func(a))
+            b.pack(side=LEFT)
+
     # Adicionar producao e update nos Displays
     def addProduct(self, event):
         if not self.fromState.get():
@@ -172,7 +279,9 @@ class GrammarGLCGui(Hideble):
         if not self.newprod.get():
             displayBox(self.master, "Producao nao pode ser nulo")
             return
-        self.grammar.addProduction(self.fromState.get()[0], self.newprod.get())
+        elements = re.findall(r'("(.*?)"|.)', self.newprod.get())
+        elements = [tuple(j for j in i if j)[-1] for i in elements]
+        self.grammar.addProduction(self.fromState.get(), list(elements))
         self.updateProdGenDisplay()
         self.updateGrammarDisplay()
 
@@ -192,7 +301,10 @@ class GrammarGLCGui(Hideble):
         for widget in self.displaygrammar.winfo_children():
             widget.destroy()
         for x in self.grammar.productions:
-            l = Label(self.displaygrammar, text=str(x) + ": " + str(' | '.join(self.grammar.productions[x])))
+            prod_list = []
+            for prod in self.grammar.productions[x]:
+                prod_list.append(' '.join(prod))
+            l = Label(self.displaygrammar, text=str(x) + ": " + str(' | '.join(prod_list)))
             l["font"] = ("Roboto", "15", "bold")
             l.pack()
 
@@ -201,11 +313,94 @@ class GrammarGLCGui(Hideble):
         self.grammar.setInitial(id)
         self.updateProdGenDisplay()
 
+    # Altera producao inicial
+    def first_func(self, id):
+        first = self.grammar.first(id)
+        displayBox(self.master, str(first))
+
+    # Altera producao inicial
+    def follow_func(self, id):
+        follow = self.grammar.follow(id)
+        displayBox(self.master, str(follow))
+
+    # Altera producao inicial
+    def convertToChomsky(self, event):
+        self.grammar.convert_chomsky_normal_form()
+        self.updateGrammarDisplay()
+
+    def removeLeftRecursionDir(self, event):
+        self.grammar.remove_left_recursion_direct()
+        self.updateGrammarDisplay()
+
+    def removeLeftRecursionIndir(self, event):
+        self.grammar.remove_left_recursion_indirect()
+        self.updateGrammarDisplay()
+
+    def factorization_direct(self, event):
+        self.grammar.factorization_direct()
+        self.updateGrammarDisplay()
+
+    def factorization_indirect(self, event):
+        self.grammar.factorization_indirect()
+        self.updateGrammarDisplay()
+
+    def show_table(self, event):
+        # try:
+            table, list = self.grammar.generate_ll_1()
+            window = Toplevel(self.master)
+            container = Frame(window)
+            container.pack()
+            terminals = set()
+            nonterminals = set(self.grammar.productions.keys())
+            for nt in self.grammar.productions:
+                for prod in self.grammar.productions[nt]:
+                    for curr_term in prod:
+                        if curr_term not in nonterminals:
+                            terminals.add(curr_term)
+            terminals.add('$')
+            for widget in container.winfo_children():
+                widget.destroy()
+            col = 1
+            chars = terminals
+            for c in chars:
+                l = Label(container, text=c, borderwidth=1, width=4, relief="solid")
+                l["font"] = ("Roboto", "15", "bold")
+                l.grid(row=0, column=col, sticky=W + E + N + S)
+                col += 1
+            ron = 1
+            for state in nonterminals:
+                labelStr = ""
+                if self.grammar.isInitial(state):
+                    labelStr += "*"
+                labelStr += state
+                l = Label(container, text=' ' + labelStr + ' ', borderwidth=1, relief="solid")
+                l["font"] = ("Roboto", "15", "bold")
+                l.grid(row=ron, column=0, sticky=W + E + N + S)
+                container.columnconfigure(col, weight=1)
+                col = 1
+                for c in chars:
+                    if c in table[state]:
+                        if table[state][c]:
+                            labelStr = str(table[state][c])
+                        else:
+                            labelStr = '-'
+                    else:
+                        labelStr = "-"
+                    l = Label(container, text=' ' + labelStr + ' ', borderwidth=1, relief="solid")
+                    l["font"] = ("Roboto", "15", "bold")
+                    l.grid(row=ron, column=col, sticky=W + E + N + S)
+                    col += 1
+                ron += 1
+
+        #
+        # except:
+        #     displayBox(self.master, "Linguagem não é LL(1)")
 
     # Salvar
     def file_save(self, event):
-        f = asksaveasfilename(defaultextension=".gr",
-                              filetypes=[('Arquivos de Gramatica Livre de Context', '.glc'), ('Todos os arquivos', '.*')])
+        f = asksaveasfilename(defaultextension=".glc",
+                              filetypes=[('Arquivos de Gramatica Livre de Context', '.glc'),
+                                         ('Todos os arquivos', '.*')])
         if not f:
             return
         self.grammar.save(f)

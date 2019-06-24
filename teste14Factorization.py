@@ -6,7 +6,7 @@ g6.addProduction('S', ['a', 'S', 'A'])
 g6.addProduction('A', ['a'])
 g6.addProduction('B', ['b'])
 g6.printGrammar()
-g6.factorization_direct()
+g6.factorization()
 g6.printGrammar()
 
 g7 = Grammar()
