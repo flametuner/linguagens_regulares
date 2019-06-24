@@ -548,6 +548,9 @@ class Grammar:
                     self.removeProduction(next, prod)
                     productions.extend(self.productions[unit])
 
+    def remove_left_recursion(self):
+        self.remove_left_recursion_indirect()
+
     def remove_left_recursion_direct(self):
         dict = list(self.productions.keys())
         while dict:
@@ -586,6 +589,9 @@ class Grammar:
                             beta.extend(alpha)
                             self.addProduction(nonterminals[i], beta)
         self.remove_left_recursion_direct()
+
+    def factorization(self):
+        self.remove_left_recursion_indirect()
 
     def factorization_direct(self):
         dict = list(self.productions.keys())
@@ -665,7 +671,7 @@ class Grammar:
                     if '&' not in first_next:
                         remove = True
                         break
-                if remove:
+                if remove and '&' in first:
                     first.remove('&')
         return first
 
@@ -706,6 +712,29 @@ class Grammar:
                             follow.update(follow_a)
         return follow
 
+    def generate_ll_1(self):
+        self.remove_left_recursion()
+        self.factorization()
+        nonterminals = set(self.productions.keys())
+        for nt in nonterminals:
+            if len(self.first(nt).intersection(self.follow(nt))) > 0:
+                raise Exception("Gramatica não é LL(1)")
+        i = 1
+        analysis_table = {}
+        for nt in self.productions:
+            if nt not in analysis_table:
+                analysis_table[nt] = {}
+            for prod in self.productions[nt]:
+                first = self.first_prod(prod)
+                if '&' in first:
+                    follow = self.follow(nt)
+                    for beta in follow:
+                        analysis_table[nt][beta] = i
+                    first.remove('&')
+                for alpha in first:
+                    analysis_table[nt][alpha] = i
+                i += 1
+        return analysis_table
 
 
 g = Grammar()
@@ -784,7 +813,6 @@ g7.addProduction('D', ['f', 'D'])
 g7.addProduction('D', ['C', 'B'])
 g7.factorization_indirect()
 
-
 g8 = Grammar()
 g8.addProduction('S', ['A', 'b'])
 g8.addProduction('S', ['A', 'B', 'c'])
@@ -810,11 +838,19 @@ g9.setInitial('S')
 g9.printGrammar()
 print(g9.first('S'))
 print(g9.follow('S'))
-print(g9.follow('A'))
-print(g9.follow('B'))
-print(g9.follow('C'))
 
-
+gtable = Grammar()
+gtable.addProduction('E', ['T', "E'"])
+gtable.addProduction("E'", ['∨', 'T', "E'"])
+gtable.addProduction("E'", ['&'])
+gtable.addProduction('T', ['F', "T'"])
+gtable.addProduction("T'", ['∧', 'F', "T'"])
+gtable.addProduction("T'", ['&'])
+gtable.addProduction('F', ['¬', 'F'])
+gtable.addProduction('F', ['id'])
+gtable.setInitial('E')
+gtable.printGrammar()
+print(gtable.generate_ll_1())
 # Gramatica Regular
 class RegularGrammar(Grammar):
 
