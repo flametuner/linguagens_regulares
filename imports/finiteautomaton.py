@@ -457,15 +457,10 @@ class Grammar:
 
     def convert_chomsky_normal_form(self):
         self.chomsky_start()
-        self.printGrammar()
         self.chomsky_term()
-        self.printGrammar()
         self.chomsky_bin()
-        self.printGrammar()
         self.chomsky_del()
-        self.printGrammar()
         self.chomsky_unit()
-        self.printGrammar()
 
     def chomsky_start(self):
         self.productions['S~'] = [[self.initial]]
@@ -592,6 +587,57 @@ class Grammar:
                             self.addProduction(nonterminals[i], beta)
         self.remove_left_recursion_direct()
 
+    def factorization_direct(self):
+        dict = list(self.productions.keys())
+        while dict:
+            nt = dict.pop(0)
+            productions = list(self.productions[nt])
+            while productions:
+                prod_1 = productions.pop(0)
+                alpha = []
+                productions_2 = list(productions)
+                while productions_2:
+                    prod_2 = productions_2.pop(0)
+                    for i in range(len(prod_1)):
+                        if prod_1[i] == prod_2[i]:
+                            alpha.append(prod_1[i])
+                            productions_2.clear()
+                        else:
+                            break
+
+                if len(alpha) > 0:
+                    all_prod = list(self.productions[nt])
+                    while all_prod:
+                        prod = all_prod.pop(0)
+                        contains = False
+                        for i in range(len(alpha)):
+                            if alpha[i] == prod[0]:
+                                prod.pop(0)
+                                contains = True
+
+                        if contains:
+                            self.removeProduction(nt, prod)
+                            self.addProduction(nt + '!', prod)
+                    alpha.append(nt + '!')
+                    self.addProduction(nt, alpha)
+
+    def factorization_indirect(self):
+        dict = list(self.productions.keys())
+        while dict:
+            nt = dict.pop(0)
+            productions = list(self.productions[nt])
+            while productions:
+                prod = productions.pop(0)
+                alpha = prod[1:len(prod)]
+                first_term = prod[0]
+                if first_term in self.productions.keys():
+                    self.removeProduction(nt, prod)
+                    for beta in self.productions[first_term]:
+                        beta = beta.copy()
+                        beta.extend(alpha)
+                        self.addProduction(nt, beta)
+        self.factorization_direct()
+
 g = Grammar()
 g.addProduction('Expr', ['Term'])
 g.addProduction('Expr', ['Expr', 'AddOp', 'Term'])
@@ -609,9 +655,7 @@ g.addProduction('AddOp', ['-'])
 g.addProduction('MulOp', ['*'])
 g.addProduction('MulOp', ['/'])
 g.setInitial('Expr')
-g.printGrammar()
 g.convert_chomsky_normal_form()
-g.printGrammar()
 g1 = Grammar()
 g1.addProduction('S', ['A', 'b', 'B'])
 g1.addProduction('S', ['C'])
@@ -622,15 +666,11 @@ g1.addProduction('C', ['c'])
 g1.addProduction('A', ['a'])
 g1.addProduction('A', ['&'])
 g1.setInitial('S')
-g1.printGrammar()
 g1.convert_chomsky_normal_form()
-g1.printGrammar()
 g2 = Grammar()
 g2.addProduction('S', ['S', 'a'])
 g2.addProduction('S', ['b'])
-g2.printGrammar()
 g2.remove_left_recursion_direct()
-g2.printGrammar()
 g3 = Grammar()
 g3.addProduction('E', ['E', '+', 'T'])
 g3.addProduction('E', ['T'])
@@ -638,28 +678,44 @@ g3.addProduction('T', ['T', '*', 'F'])
 g3.addProduction('T', ['F'])
 g3.addProduction('F', ['(', 'E', ')'])
 g3.addProduction('F', ['id'])
-g3.printGrammar()
 g3.remove_left_recursion_direct()
-g3.printGrammar()
 g4 = Grammar()
 g4.addProduction('S', ['A', 'a'])
 g4.addProduction('S', ['b'])
 g4.addProduction('A', ['A', 'c'])
 g4.addProduction('A', ['S', 'd'])
 g4.addProduction('A', ['a'])
-g4.printGrammar()
 g4.remove_left_recursion_indirect()
-g4.printGrammar()
 g5 = Grammar()
 g5.addProduction('S', ['A', 'a'])
 g5.addProduction('S', ['S','b'])
 g5.addProduction('A', ['S', 'c'])
 g5.addProduction('A', ['d'])
-g5.printGrammar()
 g5.remove_left_recursion_direct()
-g5.printGrammar()
 g5.remove_left_recursion_indirect()
-g5.printGrammar()
+g6 = Grammar()
+g6.addProduction('S', ['a', 'S', 'B'])
+g6.addProduction('S', ['a', 'S', 'A'])
+g6.addProduction('A', ['a'])
+g6.addProduction('B', ['b'])
+g6.printGrammar()
+g6.factorization_direct()
+g6.printGrammar()
+
+g7 = Grammar()
+g7.addProduction('S', ['A', 'B'])
+g7.addProduction('S', ['B', 'C'])
+g7.addProduction('A', ['a', 'D'])
+g7.addProduction('A', ['c', 'C'])
+g7.addProduction('B', ['a', 'B'])
+g7.addProduction('B', ['d', 'D'])
+g7.addProduction('C', ['e', 'C'])
+g7.addProduction('C', ['e', 'A'])
+g7.addProduction('D', ['f', 'D'])
+g7.addProduction('D', ['C', 'B'])
+g7.printGrammar()
+g7.factorization_indirect()
+g7.printGrammar()
 # Gramatica Regular
 class RegularGrammar(Grammar):
 
