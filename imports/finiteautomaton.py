@@ -638,6 +638,36 @@ class Grammar:
                         self.addProduction(nt, beta)
         self.factorization_direct()
 
+    def first(self, term):
+        terminals = set()
+        nonterminals = set(self.productions.keys())
+        for nt in self.productions:
+            for prod in self.productions[nt]:
+                for curr_term in prod:
+                    if curr_term not in nonterminals:
+                        terminals.add(curr_term)
+        if term in terminals:
+            return {term}
+        if term not in nonterminals:
+            raise Exception("Term not in Grammar")
+        first = set()
+        for prod in self.productions[term]:
+            first_term = prod[0]
+            if first_term == '&' or first_term in terminals:
+                first.add(first_term)
+            else:
+                remove = False
+                for i in range(len(prod)):
+                    first_next = self.first(prod[i])
+                    first.update(first_next)
+                    if '&' not in first_next:
+                        remove = True
+                        break
+                if remove:
+                    first.remove('&')
+        return first
+
+
 g = Grammar()
 g.addProduction('Expr', ['Term'])
 g.addProduction('Expr', ['Expr', 'AddOp', 'Term'])
@@ -679,6 +709,7 @@ g3.addProduction('T', ['F'])
 g3.addProduction('F', ['(', 'E', ')'])
 g3.addProduction('F', ['id'])
 g3.remove_left_recursion_direct()
+
 g4 = Grammar()
 g4.addProduction('S', ['A', 'a'])
 g4.addProduction('S', ['b'])
@@ -688,7 +719,7 @@ g4.addProduction('A', ['a'])
 g4.remove_left_recursion_indirect()
 g5 = Grammar()
 g5.addProduction('S', ['A', 'a'])
-g5.addProduction('S', ['S','b'])
+g5.addProduction('S', ['S', 'b'])
 g5.addProduction('A', ['S', 'c'])
 g5.addProduction('A', ['d'])
 g5.remove_left_recursion_direct()
@@ -698,9 +729,7 @@ g6.addProduction('S', ['a', 'S', 'B'])
 g6.addProduction('S', ['a', 'S', 'A'])
 g6.addProduction('A', ['a'])
 g6.addProduction('B', ['b'])
-g6.printGrammar()
 g6.factorization_direct()
-g6.printGrammar()
 
 g7 = Grammar()
 g7.addProduction('S', ['A', 'B'])
@@ -713,9 +742,32 @@ g7.addProduction('C', ['e', 'C'])
 g7.addProduction('C', ['e', 'A'])
 g7.addProduction('D', ['f', 'D'])
 g7.addProduction('D', ['C', 'B'])
-g7.printGrammar()
 g7.factorization_indirect()
-g7.printGrammar()
+
+
+g8 = Grammar()
+g8.addProduction('S', ['A', 'b'])
+g8.addProduction('S', ['A', 'B', 'c'])
+g8.addProduction('B', ['b', 'B'])
+g8.addProduction('B', ['A', 'd'])
+g8.addProduction('B', ['&'])
+g8.addProduction('A', ['a', 'A'])
+g8.addProduction('A', ['&'])
+g8.printGrammar()
+print(g8.first('B'))
+
+g9 = Grammar()
+g9.addProduction('S', ['A', 'B', 'C'])
+g9.addProduction('A', ['a', 'A'])
+g9.addProduction('A', ['&'])
+g9.addProduction('B', ['b', 'B'])
+g9.addProduction('B', ['A', 'C', 'd'])
+g9.addProduction('C', ['c', 'C'])
+g9.addProduction('C', ['&'])
+
+g9.printGrammar()
+print(g9.first('S'))
+
 # Gramatica Regular
 class RegularGrammar(Grammar):
 
@@ -753,11 +805,11 @@ class RegularGrammar(Grammar):
                 del self.productions[to.upper()]
             return -1
         prod = terminal.lower() + nonterminal.upper()
-        return super(RegularGrammar, self).addProduction(to, prod)
+        return super(RegularGrammar, self).addProduction(to.upper(), prod)
 
     def removeProduction(self, to, terminal, nonterminal=""):
         prod = terminal.lower() + nonterminal.upper()
-        super(RegularGrammar, self).removeProduction(to, prod)
+        super(RegularGrammar, self).removeProduction(to.upper(), prod)
 
     # Geração de string com nao terminal e id da produção
     def generate(self, nt, prod):
