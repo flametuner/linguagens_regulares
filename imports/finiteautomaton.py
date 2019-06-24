@@ -396,6 +396,7 @@ class DFiniteAutomata(FiniteAutomata):
         self.accepting = result.accepting
         self.automata = result.automata
 
+
 class Grammar:
 
     def __init__(self, initial=''):
@@ -552,8 +553,44 @@ class Grammar:
                     self.removeProduction(next, prod)
                     productions.extend(self.productions[unit])
 
-    def remove_left_recursion(self):
-        
+    def remove_left_recursion_direct(self):
+        dict = list(self.productions.keys())
+        while dict:
+            nt = dict.pop(0)
+            recursive_productions = []
+            non_recursive_productions = []
+            productions = list(self.productions[nt])
+            while productions:
+                prod = productions.pop(0)
+                if prod[0] == nt:
+                    recursive_productions.append(prod)
+                else:
+                    non_recursive_productions.append(prod)
+            if len(recursive_productions) > 0:
+                for rp in recursive_productions:
+                    self.removeProduction(nt, rp)
+                    rp.pop(0)
+                    rp.append(nt + '^')
+                    self.addProduction(nt + '^', rp)
+                self.addProduction(nt + '^', ['&'])
+                for nrp in non_recursive_productions:
+                    nrp.append(nt + '^')
+
+    def remove_left_recursion_indirect(self):
+        nonterminals = list(self.productions.keys())
+        for i in range(len(nonterminals)):
+            for j in range(i):
+                productions = list(self.productions[nonterminals[i]])
+                while productions:
+                    prod = productions.pop(0)
+                    if prod[0] == nonterminals[j]:
+                        self.removeProduction(nonterminals[i], prod)
+                        alpha = prod[1:len(prod)]
+                        for beta in self.productions[nonterminals[j]]:
+                            beta = beta.copy()
+                            beta.extend(alpha)
+                            self.addProduction(nonterminals[i], beta)
+        self.remove_left_recursion_direct()
 
 g = Grammar()
 g.addProduction('Expr', ['Term'])
@@ -588,6 +625,41 @@ g1.setInitial('S')
 g1.printGrammar()
 g1.convert_chomsky_normal_form()
 g1.printGrammar()
+g2 = Grammar()
+g2.addProduction('S', ['S', 'a'])
+g2.addProduction('S', ['b'])
+g2.printGrammar()
+g2.remove_left_recursion_direct()
+g2.printGrammar()
+g3 = Grammar()
+g3.addProduction('E', ['E', '+', 'T'])
+g3.addProduction('E', ['T'])
+g3.addProduction('T', ['T', '*', 'F'])
+g3.addProduction('T', ['F'])
+g3.addProduction('F', ['(', 'E', ')'])
+g3.addProduction('F', ['id'])
+g3.printGrammar()
+g3.remove_left_recursion_direct()
+g3.printGrammar()
+g4 = Grammar()
+g4.addProduction('S', ['A', 'a'])
+g4.addProduction('S', ['b'])
+g4.addProduction('A', ['A', 'c'])
+g4.addProduction('A', ['S', 'd'])
+g4.addProduction('A', ['a'])
+g4.printGrammar()
+g4.remove_left_recursion_indirect()
+g4.printGrammar()
+g5 = Grammar()
+g5.addProduction('S', ['A', 'a'])
+g5.addProduction('S', ['S','b'])
+g5.addProduction('A', ['S', 'c'])
+g5.addProduction('A', ['d'])
+g5.printGrammar()
+g5.remove_left_recursion_direct()
+g5.printGrammar()
+g5.remove_left_recursion_indirect()
+g5.printGrammar()
 # Gramatica Regular
 class RegularGrammar(Grammar):
 
