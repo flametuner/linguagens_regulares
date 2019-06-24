@@ -658,6 +658,8 @@ class Grammar:
             else:
                 remove = False
                 for i in range(len(prod)):
+                    if prod[i] == term:
+                        break
                     first_next = self.first(prod[i])
                     first.update(first_next)
                     if '&' not in first_next:
@@ -666,6 +668,44 @@ class Grammar:
                 if remove:
                     first.remove('&')
         return first
+
+    def first_prod(self, prod):
+        first = set()
+        remove = False
+        for i in range(len(prod)):
+            first_next = self.first(prod[i])
+            first.update(first_next)
+            if '&' not in first_next:
+                remove = True
+                break
+        if remove and '&' in first:
+            first.remove('&')
+        return first
+
+    def follow(self, term):
+        follow = set()
+        nonterminals = set(self.productions.keys())
+        if term not in nonterminals:
+            return follow
+        if self.isInitial(term):
+            follow.add('$')
+        for nt in self.productions:
+            for prod in self.productions[nt]:
+                for i in range(len(prod)):
+                    if prod[i] == term:
+                        third_step = False
+                        if i + 1 < len(prod):
+                            first_next = self.first_prod(prod[i + 1:])
+                            follow.update(first_next - {'&'})
+                            if '&' in first_next:
+                                third_step = True
+                        elif i + 1 == len(prod):
+                            third_step = True
+                        if third_step and nt != term:
+                            follow_a = self.follow(nt)
+                            follow.update(follow_a)
+        return follow
+
 
 
 g = Grammar()
@@ -753,8 +793,10 @@ g8.addProduction('B', ['A', 'd'])
 g8.addProduction('B', ['&'])
 g8.addProduction('A', ['a', 'A'])
 g8.addProduction('A', ['&'])
+g8.setInitial('S')
 g8.printGrammar()
 print(g8.first('B'))
+print(g8.follow('S'))
 
 g9 = Grammar()
 g9.addProduction('S', ['A', 'B', 'C'])
@@ -764,9 +806,14 @@ g9.addProduction('B', ['b', 'B'])
 g9.addProduction('B', ['A', 'C', 'd'])
 g9.addProduction('C', ['c', 'C'])
 g9.addProduction('C', ['&'])
-
+g9.setInitial('S')
 g9.printGrammar()
 print(g9.first('S'))
+print(g9.follow('S'))
+print(g9.follow('A'))
+print(g9.follow('B'))
+print(g9.follow('C'))
+
 
 # Gramatica Regular
 class RegularGrammar(Grammar):
